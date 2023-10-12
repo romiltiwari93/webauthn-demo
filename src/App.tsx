@@ -474,9 +474,9 @@ async function handleStoreEncryptionConditionNodes(
 		),
 		requestedPkpPublicKey
 	);
-	
+
 	const pkpEthAddress = publicKeyToAddress(requestedPkpPublicKey);
-	
+
 	const unifiedAccessControlConditions = getUnifiedAccessControlConditions(
 		pkpEthAddress
 	);
@@ -523,7 +523,7 @@ async function getSessionSigs(
 
 		// Get AuthSig
 		const { authSig, pkpPublicKey } = await litNodeClient.signSessionKey({
-			pkpPublicKey: requestedPkpPublicKey, 
+			pkpPublicKey: requestedPkpPublicKey,
 			authMethods,
 			statement,
 			expiration:
@@ -566,7 +566,7 @@ async function getSessionSigs(
 	console.log("sessionSigs: ", sessionSigs);
 
 	return {
-		sessionSigs
+		sessionSigs,
 	};
 }
 
@@ -671,8 +671,7 @@ async function handleRetrieveSymmetricKeyNodes(
 		encryptedSymmetricKey,
 		litNodeClient.generateAuthMethodForGoogleJWT(
 			googleCredentialResponse.credential
-		),
-		
+		)
 	);
 
 	// get the ACC
@@ -888,9 +887,15 @@ async function handleWebAuthnAuthenticate(
 }> {
 	// Fetch latest blockHash
 	setStatusFn("Fetching latest block hash...");
-	const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+	console.log("rpcUrl", rpcUrl);
+	const provider = new ethers.providers.JsonRpcProvider(
+		"https://chain-rpc.litprotocol.com/http",
+		175177
+	);
+	console.log("provider", provider);
 
 	const block = await provider.getBlock("latest");
+	console.log("block", block);
 	const blockHash = block.hash;
 
 	// Turn into byte array.
@@ -923,8 +928,13 @@ async function handleWebAuthnAuthenticate(
 	const actualAuthenticationResponse = JSON.parse(
 		JSON.stringify(authenticationResponse)
 	);
+	console.log("actualAuthenticationResponse", actualAuthenticationResponse);
 	actualAuthenticationResponse.response.userHandle = base64url.encode(
 		authenticationResponse.response.userHandle
+	);
+	console.log(
+		"actualAuthenticationResponseEncoded",
+		actualAuthenticationResponse
 	);
 
 	// Call all nodes POST /web/auth/webauthn to generate authSig.
@@ -935,14 +945,17 @@ async function handleWebAuthnAuthenticate(
 	const authMethod = litNodeClient.generateAuthMethodForWebAuthn(
 		actualAuthenticationResponse
 	);
-
+	console.log("authMethod", authMethod);
 	// Get authSig.
 	const { authSig, pkpPublicKey } = await litNodeClient.signSessionKey({
 		authMethods: [authMethod],
 		expiration: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
 		resources: [],
 	});
-
+	console.log("got session sig from node and PKP: ", {
+		authSig,
+		pkpPublicKey,
+	});
 	return { authSig, pkpPublicKey };
 }
 
